@@ -1,0 +1,256 @@
+システム構築手順
+
+
+  システム構築には次のパッケージが必要です。
+
+   OACIS
+   R
+   rsruby
+   本モジュール
+
+
+ Ubuntu 14.0 trusty での環境構築例を示します。
+
+・OACISのインストールは、OACISのマニュアル(https://github.com/crest-cassia/oacis/wiki/Installation)を
+  参照下さい。
+
+
+・Rのインストール
+
+  apt/source.list を編集して、一行をファイルに追加します。
+
+   sudo vi /etc/apt/sources.list
+
+   以下の行を追加
+    deb http://cran.md.tsukuba.ac.jp/bin/linux/ubuntu trusty/
+
+  以下のコマンドを実行します。
+    gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+    gpg -a --export E084DAB9 | sudo apt-key add -
+    sudo apt-get update
+    sudo apt-get install r-base
+
+  DoE.base パッケージの追加
+
+   R を起動します。
+
+    R
+
+   DoE.base パッケージをインストールします。
+
+    > install.packages("DoE.base")
+
+
+・rsruby のインストール
+
+    gem install rsruby -- --with-R-dir=/usr/lib/R --with-R-include=/usr/share/R --with-opt-dir=/usr/share/R
+
+  環境変数 R_HOMEの設定
+
+    vi ~/.profile
+
+    以下の一行を追加します。
+
+     export R_HOME="/usr/lib/R"
+
+    R_HOME を何に設定するかは、Rを起動し、以下のコマンドで得られます。
+
+      > Sys.getenv("R_HOME")
+
+
+・OACISの環境構築
+
+   OACISのドキュメントに記述があるため、割愛します。
+
+   * シミュレータを実行するため、ssh でリモートログインできる環境が必要です。
+
+
+   OACISへ rsrubyパッケージの追加
+
+    OACISの Gemfile にrsrubyを追加し、gem update を実行します。
+
+    # Gemfile を編集します。
+     cd $OACIS_HOME
+     vi Gemfile
+
+    utility tool 付近に以下の一行を追加します。
+
+       gem "rsruby"
+
+    bundle コマンドにより rsruby パッケージをインストールします。
+
+      bundle install --path=vendor/bundle
+
+   oacis-moduleへ rsrubyパッケージの追加
+
+     oacis-module ディレクトリ以下の Gemfile に以下の一行を追加します。
+
+      gem 'rsruby'
+
+    bundle コマンドにより rsruby パッケージをインストールします。
+
+      bundle install --path=vendor/bundle
+
+
+
+・プラグインモジュールの追加
+
+   oacis-module/plugins 以下に iad というディレクトリを作り、iad_module.rb 
+   ファイルを置いて下さい。
+
+    cd oacis-module/plugins
+    mkdir iad
+    cp iad_module.rb iad/
+
+
+
+以上で環境構築は終了します。
+
+
+----------------------------------------------------------------------------------------
+
+プログラム実行手順
+
+   シミュレータの準備
+
+    評価対象関数(シミュレータ)に相当するプログラムを、ホームディレクトリ以下に作成します。
+
+      vi /home/foo/example0.rb        (simulatorディレクトリ中にサンプルがあります)
+
+    実行パーミッションをつけます。
+
+      chmod 755 /home/foo/example0.rb
+
+
+   OACISを起動します。(すでに起動してある場合は不要)
+
+     cd $OACIS_HOME
+     bundle exec rake daemon:start
+
+   ブラウザで http://localhost:3000/ にアクセスし、作成したプログラムをシミュレータとして登録します。
+     アクセスできない場合はOACISが起動しているかどうかをチェックしてください。
+
+      (入力例)
+      New Simulator ボタンをクリック
+
+        Name      example0   
+
+        Add parameter をクリックし、シミュレータプログラムパラメータを登録します。
+
+           Name           = x0
+           Type           = Float
+           Default value  = 1.0
+           Description      空のままでかまいません。
+
+           example0.rb は x0, x1, x2, x3 のパラメータを使用しているので、上記の操作を
+           x0, x1, x2, x3 の各パラメータについて行います。
+
+           Defined Parameters は以下のようになります。
+                     Type     Default
+             x0      Float    1.0
+             x1      Float    1.0
+             x2      Float    1.0
+             x3      Float    1.0
+  
+        Command     /home/foo/example.rb       シミュレータプログラムのパスを指定します。
+        Input type  JSON                       JSON形式でパラメータを渡すので、JSONを指定します。
+        Executable on localhost                チェックします
+        Create Simulater をクリックしてシミュレータを登録します。
+
+
+   モジュールのインストールを行います。
+
+      cd oacis-module
+       ./bin/OACIS_module_installer.rb make -f build plugins/iad/iad_module.rb
+
+       対話形式でパラメータを指定します。
+
+      (入力例）
+      　install stage: select_simulator　＃シミュレータの選択
+      　[{0=>"a_sample_simulator"}, {1=>"example0"}]
+      　select num or name:
+      　> 1
+      　install stage: select_analyzer　＃アナライザの選択ですがここは-1と入力して下さい
+      　[]
+      　select num or name:
+      　> -1
+      　install stage: set_num_runs　＃１つのパラメータの組み合わせについて何回実行するかの数
+      　set num of runs in each parameter_sets:
+      　> 3
+      　selected simulator is "example0"
+      　set num of runs is "3"
+      　install stage: set_name
+      　Input module name:　＃モジュール名の登録
+      　> iad
+      　new module name is "iad"
+      　install stage: select_managed_parameters
+      　["0:x0,Float,1.0,", "1:x1,Float,1.0,", "2:x2,Float,1.0,", "3:x3,Float,1.0,"]
+      　select nums:　＃上記のパラメータの選択
+      　> 0,1,2,3
+      　["0:x0", "1:x1", "2:x2", "3:x3"]
+      　install stage: select_managed_parameters
+      　"x0"
+      　set range:[min, max(, span)]　　＃使うパラメータの範囲の設定(ここではx0)
+      　> -10.0,10.0
+      　install stage: select_managed_parameters
+      　"x1"
+      　set range:[min, max(, span)]　　＃使うパラメータの範囲の設定(ここではx1)
+      　> -10.0,10.0
+      　"x2"
+      　set range:[min, max(, span)]　　＃使うパラメータの範囲の設定(ここではx2)
+      　> -10.0,10.0
+      　"x3"
+      　set range:[min, max(, span)]　　＃使うパラメータの範囲の設定(ここではx3)
+      　> -10.0,10.0
+
+        ...   結果が表示されます (結果は、iad/_input.jsonファイルに入ります)。
+
+
+   水準値の指定
+     シミュレーションに使用する水準値を登録します。(_level_value.json ファイル)
+     指定は、JSON形式のファイルで、"変数名":[水準値]という形式で指定します。
+     変数名はシミュレータプログラムで参照しているので、プログラム(今回の場合は
+     example0.rb)と合致するようにしてください。
+
+      cd plugins/iad
+      vi _level_value.json        (プログラムファイル中にサンプルがあります)
+
+   output.json ファイルを削除
+      以前に実行した結果を保持したファイルを削除します。
+      rm _output.json
+
+   シミュレータを実行します。
+      ruby -r $OACIS_HOME/config/enveronment.rb iad_module_runner.rb
+
+      ... メッセージが表示されます。
+
+      プログラムが終了すると、プロンプトが表示されます。
+
+
+   シミュレータの実行状況は、ブラウザでOACISにアクセスするとモニターできます。
+      URL  http://localhost:3000/
+
+
+   実行が終了すると、判定結果がファイルに出力されます。
+
+     result.out     判定結果
+     orth.out       使用した直交表
+     dataset.out    途中経過のデータを記録したファイル
+
+
+
+Tips:
+   パラメータセットの分割処理
+   パラメータセットの個数が設定値よりも多い場合、iad_module では、一括で処
+   理するのではなく、一定数に分割して OACIS にてシミュレートを実行し、それ
+   をすべてのパラメータだけ繰り返し、最後に交互作用判定を行うようになってい
+   ます。
+   iad_module.rb の scope 変数に指定された値が、パラメータセットを小分けし
+   て処理する単位になります。
+
+   水準値パラメータのファイル名
+   水準値ファイルは、_level_value.json と言う名前にしていますが、これは、
+   iad_module.rb で読み取る json ファイルの名前を変更することによって変更
+   可能です。
+
+
