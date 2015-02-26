@@ -1,49 +1,191 @@
 作業報告書
 
-** 実装方法検討
+1 実装方法検討
 
 
-交互作用判定を行うRプログラムを、OACISのモジュールとして実装するために、
-以下の方針で作業を行いました。
+  交互作用判定を行うRプログラムを、OACISのモジュールとして実装するために、
+  以下の方針で作業を行いました。
 
-
-・OACISのモジュールとして構成するため、Rでかかれたプログラムをほぼそのまま
+ ・OACISのモジュールとして構成するため、Rで書かれたプログラムをほぼそのまま
    rubyで書き換える。
-・直交表は ruby から R を呼び出して得る(rsrubyを使用)。
-・水準値はファイル(json形式)から読み出す。
-・OACISへパラメータセット登録は、分割して行うことを可能にし、すべてのパラ
-  メータについてシミュレーションが終了した時点で交互作用判定を行う。  
+
+ ・直交表は ruby から R を呼び出して得る(rsrubyを使用)。
+
+ ・水準値はファイル(json形式)から読み出す。
+
+ ・パラメータセットをOACISに登録してシミュレーションを行う際に、パラメータ
+   セットを分割して処理することを可能にする。
 
 
-本プログラムの動作概要は以下の通りです。
+2 プログラムの処理概要
 
- 1 水準値を入力ファイルから読み取り、要因数および水準値数を元に、Rを呼び
-   出して直交表を得る。
+  本プログラムの動作概要は以下の通りです。
 
- 2 直交表から置換直交表を得て、パラメータセットを作成する。
+   1 水準値を入力ファイルから読み取り、要因数および水準値数を元に、Rを呼び
+     出して直交表を得る。
 
- 3 パラメータセットのうち、未処理分の中から一定個数のものをOACISに登録し、
-   シミュレーションを実行する。(パラメータセットを小分けにして実行する機能)
+   2 直交表から置換直交表を得て、パラメータセットを作成する。
 
- 4 シミュレーション結果をOACISから取得し、保持する。
+   3 パラメータセットのうち、未処理分の中から一定個数のものをOACISに登録し、
+     シミュレーションを実行する。(パラメータセットを小分けにして実行する機能)
 
- 5 すべてのパラメータセットについてシミュレーションが行われるまで 3 〜 4を
-   繰り返す
+   4 シミュレーション結果をOACISから取得し、保持する。
 
- 6 OACISから取得した結果に対して、交互作用の判定を実行する。
+   5 すべてのパラメータセットについてシミュレーションが行われるまで 3 〜 4を
+     繰り返す
 
- 7 判定結果をファイルに出力する。
+   6 OACISから取得した結果に対して、交互作用の判定を実行する。
 
+   7 判定結果をファイルに出力する。
 
-
-関数の解説
-
-
+   8 プログラムを終了する。
 
 
-OACISの判定
+
+3 動作検証結果
+
+  動作指示書にしたがってテストを行い、指定されているのとほぼ期待通りの結果が
+  得られました。
 
 
-動作検証結果
+4 シミュレーション結果のデータフォーマット
 
-  動作指示書にしたがってテストを行い、指定されているのと同様の結果が得られました。
+  RプログラムとOACISでは、シミュレーション結果のデータフォーマットが異なります。
+
+  4x4の直交表で、3回反復した場合、
+  R プログラムでは以下のような計算結果が得られます。
+
+    1 2 2 1 -+
+    2 2 1 1 -|----+
+    1 1 2 2 -|----|----+
+    1 1 1 1 -|----|----|----+
+             |    |    |    |
+             v    v    v    v
+           [ y0 , y1,  y2,  y3  ] 1回目
+           [ y0', y1', y2', y3' ] 2回目
+           [ y0", y1", y2", y3" ] 3回目
+
+
+  一方、OACIS では以下のような結果が得られます。
+
+    1 2 2 1  -> [ y0, y0', y0" ]
+    2 2 1 1  -> [ y1, y1', y1" ]
+    1 1 2 2  -> [ y2, y2', y2" ]
+    1 1 1 1  -> [ y3, y3', y3" ]
+
+                  ^    ^    ^
+                  |    |    |
+                1回目  |    |
+                     2回目  |
+                          3回目
+
+ このプログラムでは、OACISで得られた結果の配列を、Rのプログラムでの
+ 配列のならびに変換(arrange_data_format())して、以後の処理を行って
+ います。
+
+
+5 小分け機能について
+
+  generate_runs で、OACISにパラメータセットを登録するときに、一度にすべての
+  パラメータセットを登録するのではなく、scope 変数に指定された数だけを登録し、
+  evaluate_runs で結果を回収します。
+  次の generate_runs では、シミュレーションが完了した次から scope個のパラメー
+  タセットを登録し、evaluate_runsで結果を回収します。
+  この処理をすべてのパラメータセットに対して実行し、すべての処理が完了した時
+  点で交互作用の判定を行い、ループを抜けてプログラムを終了させます。
+
+
+
+6 関数の解説
+
+  def rev_orthogonal_table(ortable, check)
+
+    直交表の要因"check"に対する置換直交表を返す。
+
+
+  def or_make_data_set(rev_orth1, v2)
+
+    置換直交表と水準値から、シミュレーションに使用するパラメータセットの配列を
+    作成する。
+
+
+  def or_get_parameter_set(v2, nfactors=1, plan=nil)
+    
+    置換直交表と、パラメータセットの配列を返す。
+
+
+  def dump_array(array, size, title)
+
+    配列をダンプする(デバッグ用)
+
+
+  def count_param(array, size)
+
+    パラメータセットの数をカウントして返す
+
+
+  def or_use_orthogonal_table(fun, params, repeat)
+
+    Rの use_orthogonal_table と同じ動作をする関数 (結果の比較用に作成:デバッグ用)
+
+
+  def or_sampling_data(fun, param_set, repeat=1)
+
+    Rの sampling_data と同じ動作をする関数 (結果の比較用に作成:デバッグ用)
+
+
+  def arrange_data_format(nfactors, nlevels, rev_orth, data0, repeat)
+
+    データフォーマットをRプログラムのdatasetフォーマットと同じ形式に
+    変換する
+
+
+  def conv_flat_data(data, nexp, nlevels)
+
+    OACISから得たシミュレーション結果を、中間形式に変換する。
+
+
+  def dump_data_set(data_set, nfactors, nlevels, repeat)
+
+    dataset を標準出力にダンプする関数(デバッグ用)
+
+
+  def fout_data_set(data_set, nfactors, nlevels, repeat)
+
+    dataset(シミュレーション結果と置換直交表)をファイルに出力する。
+
+
+  def fout_orth(plan)
+
+    直交表をファイルに出力する
+
+
+  def fout_revorth(rev_orth, nfactors)
+
+    置換直交表をファイルに出力する(使用していない)
+
+
+
+ 以下の関数は、Rの関数をrubyで書き換えたものであり、機能的にほとんど同じです。
+
+  def finding_interaction_all_c(data_set)
+  def finding_interaction_c(data_set, check)
+  def diff_epsilon_c(data_set_i)
+  def calc_epsilon_c(data_i_j)
+  def average_epsilon_c (diff_epsilon_b)
+  def test_interaction_epsilon_c(data_set_epsilon=noise_data_i)
+  def test_pseudo_effect_c(data_set, epsilon)
+  def test_effect_confounding_c(data_set, epsilon)
+  def preprocessing(d_rev, i, j)
+  def check_interaction_all_c(data_set_set)
+  def check_interaction_c(data_set_i, check=1)
+  def calc_edge_information(mse1, threshold=1, zero_flg=nil, single_flg=nil)
+  def calc_node_size(data_set)
+  def calc_node_color(results_confound)
+  def calc_node_shape(results_confound)
+  def calc_effects_c_using_table(data_set_i_j, table_factor_check_is_i, mean_remove_flg=TRUE)
+  def new_show_interaction_graph_all_c(mse1,data_set,results_confound,threshold=nil)
+  def total_sd(data_set)
+  def new_arrange_the_confounding_all(results_confound)
+  def new_arrange_the_confounding_i(results_confound,check)
+  def arrange_the_network(network_information)
