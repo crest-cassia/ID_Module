@@ -857,15 +857,21 @@ plan<-as.matrix(oa.design(nfactors=#{@nfactors},nlevels=nlevels,seed=1))"
       confound << t3
     }
 
+    resultstr =  "-----------Confounding Information Begin---------------\n"
+    resultstr += "{\n"
+    resultstr += "Noise:{ #{(noise - [""]).join(",")} },\n"
+    resultstr += "None:{ #{(none - [""]).join(",")} },\n"
+    resultstr += "Single:{ #{(single - [""]).join(",")} },\n"
+    resultstr += "Confound:{ #{(confound - [""]).join(",")} }\n"
+    resultstr += "}\n"
+    resultstr += "-----------Confounding Information End---------------\n"
+
+    # print result.
+    print resultstr
+
+    # save result to file.
     open("result.out", "w") { |f|
-      f.print "-----------Confounding Information Begin---------------\n"
-      f.print "{\n"
-      f.print "Noise:{ #{(noise - [""]).join(",")} },\n"
-      f.print "None:{ #{(none - [""]).join(",")} },\n"
-      f.print "Single:{ #{(single - [""]).join(",")} },\n"
-      f.print "Confound:{ #{(confound - [""]).join(",")} }\n"
-      f.print "}\n"
-      f.print "-----------Confounding Information End---------------\n"
+      f.print resultstr
     }
     return [noise,none,single,confound]
   end
@@ -964,46 +970,53 @@ plan<-as.matrix(oa.design(nfactors=#{@nfactors},nlevels=nlevels,seed=1))"
 
   def arrange_the_network(network_information)
     #  p network_information
-    open("result.out", "a") { |f|
-      f.print "-----------Network Information Begin---------------\n"
-      edge = network_information[0]
-      #  print "edge = #{edge}\n"
-      f.print "{\n"
-      f.print "Edge_Out_In_Weight:[\n"
-      (edge[0].length).times {|i|
-        if (i < edge[0].length-1) then
-          f.print "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}],\n"
-        else
-          f.print "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}]],\n"
-        end
-      }
-	
-      size = network_information[1]
-      f.print "Node_Size:["
-      (size.length).times {|i|
-        f.print ", " unless i == 0
-        f.printf "%.4e",size[i]
-      }
-      f.print "],\n"
-
-      color = network_information[2]
-      f.print "Node_Color:["
-      (color.length).times {|i|
-        if (i != 0) then f.print "," end
-        f.print "#{color[i]}"
-      }
-      f.print "],\n"
-
-      shape = network_information[3]
-      f.print "Node_Shape:["
-      (shape.length).times {|i|
-        if (i != 0) then f.print "," end
-        f.print "#{shape[i]}"
-      }
-      f.print "]\n"
-      f.print "}\n"
-      f.print "-----------Network Information End---------------\n"
+    resultstr =  "-----------Network Information Begin---------------\n"
+    edge = network_information[0]
+    #  print "edge = #{edge}\n"
+    resultstr += "{\n"
+    resultstr += "Edge_Out_In_Weight:[\n"
+    (edge[0].length).times {|i|
+      if (i < edge[0].length-1) then
+        resultstr += "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}],\n"
+      else
+        resultstr += "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}]],\n"
+      end
     }
+	
+    size = network_information[1]
+    resultstr += "Node_Size:["
+    (size.length).times {|i|
+      resultstr += ", " unless i == 0
+      resultstr += sprintf "%.4e",size[i]
+    }
+    resultstr += "],\n"
+
+    color = network_information[2]
+    resultstr += "Node_Color:["
+    (color.length).times {|i|
+      if (i != 0) then resultstr += "," end
+      resultstr += "#{color[i]}"
+    }
+    resultstr += "],\n"
+
+    shape = network_information[3]
+    resultstr += "Node_Shape:["
+    (shape.length).times {|i|
+      if (i != 0) then resultstr += "," end
+      resultstr += "#{shape[i]}"
+    }
+    resultstr += "]\n"
+    resultstr += "}\n"
+    resultstr += "-----------Network Information End---------------\n"
+
+    # print result.
+    print resultstr
+
+    # save result to file.
+    open("result.out", "a") { |f|
+      f.print resultstr
+    }
+
   end
 
   ### End of function definitions.

@@ -869,13 +869,15 @@ def total_sd(data_set)
   sd_mean.average
 end
 
+
 def new_arrange_the_confounding_all(results_confound)
   noise = []
   none = []
   single = []
   confound = []
-#  print "results_confound.length = #{results_confound.length} \n"
-#  0.upto(results_confound.length-1) {|i|
+
+  print "results_confound.length = #{results_confound.length} \n"
+  #  0.upto(results_confound.length-1) {|i|
   (results_confound.length).times {|i|
     t0, t1, t2, t3 = new_arrange_the_confounding_i(results_confound,i)
     noise    << t0
@@ -884,16 +886,22 @@ def new_arrange_the_confounding_all(results_confound)
     confound << t3
   }
 
-#  open("result.out", "w") { |f|
-    print "-----------Confounding Information Begin---------------\n"
-    print "{\n"
-    print "Noise:{ #{(noise - [""]).join(",")} },\n"
-    print "None:{ #{(none - [""]).join(",")} },\n"
-    print "Single:{ #{(single - [""]).join(",")} },\n"
-    print "Confound:{ #{(confound - [""]).join(",")} }\n"
-    print "}\n"
-    print "-----------Confounding Information End---------------\n"
-#  }
+  resultstr =  "-----------Confounding Information Begin---------------\n"
+  resultstr += "{\n"
+  resultstr += "Noise:{ #{(noise - [""]).join(",")} },\n"
+  resultstr += "None:{ #{(none - [""]).join(",")} },\n"
+  resultstr += "Single:{ #{(single - [""]).join(",")} },\n"
+  resultstr += "Confound:{ #{(confound - [""]).join(",")} }\n"
+  resultstr += "}\n"
+  resultstr += "-----------Confounding Information End---------------\n"
+
+  # print result.
+  print resultstr
+
+  # save result to file.
+  #open("result.out", "w") { |f|
+  #  f.print resultstr
+  #}
   return [noise,none,single,confound]
 end
 
@@ -988,47 +996,53 @@ def new_arrange_the_confounding_i(results_confound,check)
 end
 
 def arrange_the_network(network_information)
-#  p network_information
-#  open("result.out", "a") { |f|
-    print "-----------Network Information Begin---------------\n"
-    edge = network_information[0]
-#  print "edge = #{edge}\n"
-    print "{\n"
-    print "Edge_Out_In_Weight:[\n"
-    (edge[0].length).times {|i|
-      if (i < edge[0].length-1) then
-        print "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}],\n"
-      else
-        print "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}]],\n"
-      end
-    }
+  #  p network_information
+  resultstr =  "-----------Network Information Begin---------------\n"
+  edge = network_information[0]
+  #  print "edge = #{edge}\n"
+  resultstr += "{\n"
+  resultstr += "Edge_Out_In_Weight:[\n"
+  (edge[0].length).times {|i|
+    if (i < edge[0].length-1) then
+      resultstr += "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}],\n"
+    else
+      resultstr += "[#{edge[1][i]}, #{edge[0][i]}, #{edge[2][i]}]],\n"
+    end
+  }
 	
-    size = network_information[1]
-    print "Node_Size:["
-    (size.length).times {|i|
-      print ", " unless i == 0
-      printf "%.4e",size[i]
-    }
-    print "],\n"
+  size = network_information[1]
+  resultstr += "Node_Size:["
+  (size.length).times {|i|
+    resultstr += ", " unless i == 0
+    resultstr += sprintf "%.4e",size[i]
+  }
+  resultstr += "],\n"
 
-    color = network_information[2]
-    print "Node_Color:["
-    (color.length).times {|i|
-      if (i != 0) then print "," end
-      print "#{color[i]}"
-    }
-    print "],\n"
+  color = network_information[2]
+  resultstr += "Node_Color:["
+  (color.length).times {|i|
+    if (i != 0) then resultstr += "," end
+    resultstr += "#{color[i]}"
+  }
+  resultstr += "],\n"
 
-    shape = network_information[3]
-    print "Node_Shape:["
-    (shape.length).times {|i|
-      if (i != 0) then print "," end
-      print "#{shape[i]}"
-    }
-    print "]\n"
-    print "}\n"
-    print "-----------Network Information End---------------\n"
-#  }
+  shape = network_information[3]
+  resultstr += "Node_Shape:["
+  (shape.length).times {|i|
+    if (i != 0) then resultstr += "," end
+    resultstr += "#{shape[i]}"
+  }
+  resultstr += "]\n"
+  resultstr += "}\n"
+  resultstr += "-----------Network Information End---------------\n"
+
+  # print result.
+  print resultstr
+
+  # save result to file.
+  #open("result.out", "a") { |f|
+  #  f.print resultstr
+  #}
 end
 
 
